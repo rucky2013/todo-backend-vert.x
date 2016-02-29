@@ -1,18 +1,20 @@
 package com.sczyh30.todolist;
 
+
 import com.sczyh30.todolist.entity.Todo;
 
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.ext.web.handler.CorsHandler;
 
 import java.util.*;
 
 /**
- * Todo App
+ * Todo Application
  */
 public class VertTodoApp extends AbstractVerticle {
 
@@ -31,17 +33,30 @@ public class VertTodoApp extends AbstractVerticle {
 
     private void initData() {
         todos.put(1, new Todo(1, "Something to do...", false, 1));
-        todos.put(2, new Todo(2, "Something to do...", false, 2));
+        todos.put(2, new Todo(2, "Another thing to do...", false, 2));
     }
 
     @Override
     public void start() throws Exception {
-        System.out.println("Todo service is running at 8080 port.");
+        System.out.println("Todo service is running at 8080 port...");
         initData();
 
         Router router = Router.router(vertx);
+        // CORS support
+        Set<String> allowHeaders = new HashSet<>();
+        allowHeaders.add("x-requested-with");
+        allowHeaders.add("origin");
+        allowHeaders.add("content-type");
+        allowHeaders.add("accept");
+        Set<HttpMethod> allowMethods = new HashSet<>();
+        allowMethods.add(HttpMethod.GET);
+        allowMethods.add(HttpMethod.POST);
+        allowMethods.add(HttpMethod.DELETE);
+        allowMethods.add(HttpMethod.PATCH);
 
-        router.route().handler(BodyHandler.create());
+        router.route().handler(CorsHandler.create("*").allowedHeaders(allowHeaders)
+            .allowedMethods(allowMethods));
+
         router.get(API_GET).handler(this::handleGetTodo);
         router.get(API_LIST_ALL).handler(this::handleGetAll);
         router.post(API_CREATE).handler(this::handleCreateTodo);
@@ -66,15 +81,15 @@ public class VertTodoApp extends AbstractVerticle {
 
     private void handleGetTodo(RoutingContext context) {
         String todoID = context.request().getParam("todoId");
-        HttpServerResponse response = context.response();
         if (todoID == null)
-            sendError(400, response);
+            sendError(400, context.response());
         else {
             Optional<Todo> maybeTodo = getTodoById(Integer.valueOf(todoID));
             if(!maybeTodo.isPresent())
-                sendError(404, response);
+                sendError(404, context.response());
             else {
-                response.putHeader("content-type", "application/json; charset=utf-8")
+                context.response()
+                        .putHeader("content-type", "application/json; charset=utf-8")
                         .end(Json.encodePrettily(maybeTodo.get()));
             }
 
@@ -91,28 +106,28 @@ public class VertTodoApp extends AbstractVerticle {
         int todoID = Integer.valueOf(context.request().getParam("todoId"));
         final Todo newTodo = Json.decodeValue(context.getBodyAsString(),
                 Todo.class);
-        HttpServerResponse response = context.response();
         Optional<Todo> maybeTodo = getTodoById(todoID);
         if(!maybeTodo.isPresent())
-            sendError(404, response);
+            sendError(404, context.response());
         else if(newTodo == null)
-            sendError(400, response);
+            sendError(400, context.response());
 
         todos.remove(todoID);
         Todo mergeTodo = maybeTodo.get().merge(newTodo);
         todos.put(todoID, mergeTodo);
-        response.putHeader("content-type", "application/json; charset=utf-8")
+        context.response()
+                .putHeader("content-type", "application/json; charset=utf-8")
                 .end(Json.encodePrettily(mergeTodo));
     }
 
     private void handleDeleteOne(RoutingContext context) {
-        String todoID = context.request().getParam("todoId");
-        HttpServerResponse response = context.response();
-        Optional<Todo> maybeTodo = getTodoById(Integer.valueOf(todoID));
+        int todoID = Integer.valueOf(context.request().getParam("todoId"));
+        Optional<Todo> maybeTodo = getTodoById(todoID);
         if(!maybeTodo.isPresent())
-            sendError(404, response);
+            sendError(404, context.response());
         else
-            todos.remove(maybeTodo.get());
+            todos.remove(todoID);
+        context.response().setStatusCode(204).end();
     }
 
     private void handleDeleteAll(RoutingContext context) {
