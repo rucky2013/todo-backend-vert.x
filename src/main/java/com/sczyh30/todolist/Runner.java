@@ -8,10 +8,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.function.Consumer;
 
-
+/**
+ * Runner class copied from the rest sample
+ */
 public class Runner {
 
-    public static final String DIR = "/src/main/java/";
+    public static final String DIR = "src/main/java/";
 
     public static void runExample(Class clazz) {
         runExample(DIR, clazz, new VertxOptions().setClustered(false), null);
@@ -20,13 +22,6 @@ public class Runner {
     public static void runExample(String exampleDir, Class clazz, VertxOptions options, DeploymentOptions
             deploymentOptions) {
         runExample(exampleDir + clazz.getPackage().getName().replace(".", "/"), clazz.getName(), options, deploymentOptions);
-    }
-
-    public static void runScriptExample(String prefix, String scriptName, VertxOptions options) {
-        File file = new File(scriptName);
-        String dirPart = file.getParent();
-        String scriptDir = prefix + dirPart;
-        runExample(scriptDir, scriptDir + "/" + file.getName(), options, null);
     }
 
     public static void runExample(String exampleDir, String verticleID, VertxOptions options, DeploymentOptions deploymentOptions) {
