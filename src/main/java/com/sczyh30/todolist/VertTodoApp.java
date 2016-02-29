@@ -1,4 +1,4 @@
-package org.samsara.vert.todolist;
+package com.sczyh30.todolist;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.http.HttpServerResponse;

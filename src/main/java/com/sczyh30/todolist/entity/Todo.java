@@ -1,4 +1,4 @@
-package org.samsara.vert.todolist.entity;
+package com.sczyh30.todolist.entity;
 
 /**
  * Todo Entity
