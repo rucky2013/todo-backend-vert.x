@@ -1,7 +1,7 @@
 # IntelliJ project files
 .idea
 *.iml
+# build files
 .gradle
 build
-out
-gen
+.vertx
