@@ -14,9 +14,9 @@ import io.vertx.ext.web.handler.CorsHandler;
 import java.util.*;
 
 /**
- * Todo Application
+ * Vert.x todo Verticle
  */
-public class VertTodoApp extends AbstractVerticle {
+public class TodoVerticle extends AbstractVerticle {
 
     public static final String API_GET = "/todos/:todoId";
     public static final String API_LIST_ALL = "/todos";
@@ -25,11 +25,9 @@ public class VertTodoApp extends AbstractVerticle {
     public static final String API_DELETE = "/todos/:todoId";
     public static final String API_DELETE_ALL = "/todos";
 
-    public static void main(String[] args) {
-        Runner.runExample(VertTodoApp.class);
-    }
-
     private Map<Integer, Todo> todos = new LinkedHashMap<>();
+
+    //RedisClient redis = RedisClient.create(vertx, new RedisOptions().setHost("127.0.0.1"));
 
     private void initData() {
         todos.put(1, new Todo(1, "Something to do...", false, 1));
