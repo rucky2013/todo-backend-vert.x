@@ -77,4 +77,6 @@ public class Todo {
                 getOrElse(todo.completed, completed),
                 getOrElse(todo.order, order));
     }
+
+
 }

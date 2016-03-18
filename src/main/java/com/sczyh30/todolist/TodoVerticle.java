@@ -2,6 +2,7 @@ package com.sczyh30.todolist;
 
 
 import com.sczyh30.todolist.entity.Todo;
+import static com.sczyh30.todolist.Constants.*;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.http.HttpMethod;
@@ -10,6 +11,8 @@ import io.vertx.core.json.Json;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.CorsHandler;
+import io.vertx.redis.RedisClient;
+import io.vertx.redis.RedisOptions;
 
 import java.util.*;
 
@@ -18,25 +21,34 @@ import java.util.*;
  */
 public class TodoVerticle extends AbstractVerticle {
 
-    public static final String API_GET = "/todos/:todoId";
-    public static final String API_LIST_ALL = "/todos";
-    public static final String API_CREATE= "/todos";
-    public static final String API_UPDATE = "/todos/:todoId";
-    public static final String API_DELETE = "/todos/:todoId";
-    public static final String API_DELETE_ALL = "/todos";
+    //private Map<Integer, Todo> todos = new LinkedHashMap<>();
 
-    private Map<Integer, Todo> todos = new LinkedHashMap<>();
-
-    //RedisClient redis = RedisClient.create(vertx, new RedisOptions().setHost("127.0.0.1"));
+    RedisClient redis;
 
     private void initData() {
-        todos.put(1, new Todo(1, "Something to do...", false, 1));
-        todos.put(2, new Todo(2, "Another thing to do...", false, 2));
+        final RedisOptions config = new RedisOptions()
+                .setHost("127.0.0.1");
+        redis = RedisClient.create(vertx, config);
+
+        redis.hset(REDIS_TODO_KEY, "1", Json.encodePrettily(
+                new Todo(1, "Something to do...", false, 1)), res -> {
+        });
+
+        redis.hset(REDIS_TODO_KEY, "2", Json.encodePrettily(
+                new Todo(2, "Another thing to do...", false, 2)), res -> {
+        });
+
+        //todos.put(1, new Todo(1, "Something to do...", false, 1));
+        //todos.put(2, new Todo(2, "Another thing to do...", false, 2));
+    }
+
+    private Todo getTodoFromJson(String jsonStr) {
+        return Json.decodeValue(jsonStr, Todo.class);
     }
 
     @Override
     public void start() throws Exception {
-        System.out.println("Todo service is running at 8080 port...");
+        System.out.println("Todo service is running at 8082 port...");
         initData();
 
         Router router = Router.router(vertx);
@@ -64,17 +76,22 @@ public class TodoVerticle extends AbstractVerticle {
 
         vertx.createHttpServer()
                 .requestHandler(router::accept)
-                .listen(8080);
+                .listen(8082);
     }
 
     private void handleCreateTodo(RoutingContext context) {
-        final Todo todo = Json.decodeValue(context.getBodyAsString(),
-                Todo.class);
-        todos.put(todo.getId(), todo);
-        context.response()
-                .setStatusCode(201)
-                .putHeader("content-type", "application/json; charset=utf-8")
-                .end(Json.encodePrettily(todo));
+        final Todo todo = getTodoFromJson(context.getBodyAsString());
+        redis.hset(REDIS_TODO_KEY, String.valueOf(todo.getId()),
+                Json.encodePrettily(todo), res -> {
+                    if (res.succeeded())
+                        context.response()
+                                .setStatusCode(201)
+                                .putHeader("content-type", "application/json; charset=utf-8")
+                                .end(Json.encodePrettily(todo));
+                    else
+                        sendError(503, context.response());
+                });
+        //todos.put(todo.getId(), todo);
     }
 
     private void handleGetTodo(RoutingContext context) {
@@ -82,61 +99,113 @@ public class TodoVerticle extends AbstractVerticle {
         if (todoID == null)
             sendError(400, context.response());
         else {
-            Optional<Todo> maybeTodo = getTodoById(Integer.valueOf(todoID));
+            redis.hget(REDIS_TODO_KEY, todoID, x -> {
+                String result = x.result();
+                if (result == null)
+                    sendError(404, context.response());
+                else {
+                    context.response()
+                            .putHeader("content-type", "application/json; charset=utf-8")
+                            .end(result);
+                }
+            });
+            /*Optional<Todo> maybeTodo = getTodoById(Integer.valueOf(todoID));
             if(!maybeTodo.isPresent())
                 sendError(404, context.response());
             else {
                 context.response()
                         .putHeader("content-type", "application/json; charset=utf-8")
                         .end(Json.encodePrettily(maybeTodo.get()));
-            }
-
+            }*/
         }
     }
 
     private void handleGetAll(RoutingContext context) {
-        context.response()
+        redis.hgetall(REDIS_TODO_KEY, res -> {
+            if (res.succeeded())
+                context.response()
+                    .putHeader("content-type", "application/json; charset=utf-8")
+                    .end(res.result().encodePrettily());
+            else
+                sendError(404, context.response());
+        });
+        /*context.response()
                 .putHeader("content-type", "application/json; charset=utf-8")
-                .end(Json.encodePrettily(todos.values()));
+                .end(Json.encodePrettily(todos.values()));*/
     }
 
     private void handleUpdateTodo(RoutingContext context) {
-        int todoID = Integer.valueOf(context.request().getParam("todoId"));
-        final Todo newTodo = Json.decodeValue(context.getBodyAsString(),
-                Todo.class);
-        Optional<Todo> maybeTodo = getTodoById(todoID);
-        if(!maybeTodo.isPresent())
+        String todoID = context.request().getParam("todoId");
+        final Todo newTodo = getTodoFromJson(context.getBodyAsString());
+        // handle error
+        if(newTodo == null) {
+            sendError(400, context.response());
+            return;
+        }
+
+        redis.hget(REDIS_TODO_KEY, todoID, x -> {
+            String result = x.result();
+            if (result == null)
+                sendError(404, context.response());
+            else {
+                Todo oldTodo = getTodoFromJson(result);
+                String response = Json.encodePrettily(oldTodo.merge(newTodo));
+                redis.hset(REDIS_TODO_KEY, todoID, response, res -> {
+                    if (res.succeeded()) {
+                        context.response()
+                                .putHeader("content-type", "application/json; charset=utf-8")
+                                .end(Json.encodePrettily(response));
+                    }
+                });
+            }
+        });
+        /*if(!maybeTodo.isPresent())
             sendError(404, context.response());
         else if(newTodo == null)
             sendError(400, context.response());
 
         todos.remove(todoID);
         Todo mergeTodo = maybeTodo.get().merge(newTodo);
-        todos.put(todoID, mergeTodo);
+        todos.put(Integer.parseInt(todoID), mergeTodo);
         context.response()
                 .putHeader("content-type", "application/json; charset=utf-8")
-                .end(Json.encodePrettily(mergeTodo));
+                .end(Json.encodePrettily(mergeTodo));*/
+        //Optional<Todo> maybeTodo = getTodoById(todoID);
     }
 
     private void handleDeleteOne(RoutingContext context) {
-        int todoID = Integer.valueOf(context.request().getParam("todoId"));
-        Optional<Todo> maybeTodo = getTodoById(todoID);
+        String todoID = context.request().getParam("todoId");
+        redis.hdel(REDIS_TODO_KEY, todoID, res -> {
+            if (res.succeeded())
+                context.response().setStatusCode(204).end();
+            else
+                sendError(404, context.response());
+        });
+        /*Optional<Todo> maybeTodo = getTodoById(todoID);
         if(!maybeTodo.isPresent())
             sendError(404, context.response());
         else
             todos.remove(todoID);
-        context.response().setStatusCode(204).end();
+        context.response().setStatusCode(204).end();*/
     }
 
     private void handleDeleteAll(RoutingContext context) {
-        todos.clear();
+        redis.del(REDIS_TODO_KEY, res -> {
+            if (res.succeeded())
+                context.response().setStatusCode(204).end();
+            else
+                sendError(404, context.response());
+        });
     }
 
     private void sendError(int statusCode, HttpServerResponse response) {
         response.setStatusCode(statusCode).end();
     }
 
-    private Optional<Todo> getTodoById(int id) {
-        return Optional.ofNullable(todos.get(id));
-    }
+    /*private Optional<Todo> getTodoById(String id) {
+        redis.hget(REDIS_TODO_KEY, id, x -> {
+
+        });
+        return Optional.ofNullable(???);
+    }*/
 }
