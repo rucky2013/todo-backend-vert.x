@@ -9,7 +9,7 @@ jar {
 sourceCompatibility = 1.8
 
 
-//mainClassName = "com.sczyh30.todolist.VertTodoApp"
+//mainClassName = "com.sczyh30.todolist.Application"
 
 repositories {
     mavenCentral()

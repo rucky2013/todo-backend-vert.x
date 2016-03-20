@@ -21,8 +21,6 @@ import java.util.*;
  */
 public class TodoVerticle extends AbstractVerticle {
 
-    //private Map<Integer, Todo> todos = new LinkedHashMap<>();
-
     RedisClient redis;
 
     private void initData() {
@@ -32,14 +30,16 @@ public class TodoVerticle extends AbstractVerticle {
 
         redis.hset(REDIS_TODO_KEY, "1", Json.encodePrettily(
                 new Todo(1, "Something to do...", false, 1)), res -> {
+            if (res.failed()) {
+                System.out.println("[Error]Redis service is not running!");
+                //res.cause().printStackTrace();
+            }
         });
 
         redis.hset(REDIS_TODO_KEY, "2", Json.encodePrettily(
                 new Todo(2, "Another thing to do...", false, 2)), res -> {
         });
 
-        //todos.put(1, new Todo(1, "Something to do...", false, 1));
-        //todos.put(2, new Todo(2, "Another thing to do...", false, 2));
     }
 
     private Todo getTodoFromJson(String jsonStr) {
@@ -48,7 +48,6 @@ public class TodoVerticle extends AbstractVerticle {
 
     @Override
     public void start() throws Exception {
-        System.out.println("Todo service is running at 8082 port...");
         initData();
 
         Router router = Router.router(vertx);
@@ -67,6 +66,7 @@ public class TodoVerticle extends AbstractVerticle {
         router.route().handler(CorsHandler.create("*").allowedHeaders(allowHeaders)
             .allowedMethods(allowMethods));
 
+        // routes
         router.get(API_GET).handler(this::handleGetTodo);
         router.get(API_LIST_ALL).handler(this::handleGetAll);
         router.post(API_CREATE).handler(this::handleCreateTodo);
@@ -91,7 +91,6 @@ public class TodoVerticle extends AbstractVerticle {
                     else
                         sendError(503, context.response());
                 });
-        //todos.put(todo.getId(), todo);
     }
 
     private void handleGetTodo(RoutingContext context) {
@@ -109,14 +108,6 @@ public class TodoVerticle extends AbstractVerticle {
                             .end(result);
                 }
             });
-            /*Optional<Todo> maybeTodo = getTodoById(Integer.valueOf(todoID));
-            if(!maybeTodo.isPresent())
-                sendError(404, context.response());
-            else {
-                context.response()
-                        .putHeader("content-type", "application/json; charset=utf-8")
-                        .end(Json.encodePrettily(maybeTodo.get()));
-            }*/
         }
     }
 
@@ -129,16 +120,13 @@ public class TodoVerticle extends AbstractVerticle {
             else
                 sendError(404, context.response());
         });
-        /*context.response()
-                .putHeader("content-type", "application/json; charset=utf-8")
-                .end(Json.encodePrettily(todos.values()));*/
     }
 
     private void handleUpdateTodo(RoutingContext context) {
         String todoID = context.request().getParam("todoId");
         final Todo newTodo = getTodoFromJson(context.getBodyAsString());
         // handle error
-        if(newTodo == null) {
+        if (newTodo == null) {
             sendError(400, context.response());
             return;
         }
@@ -159,18 +147,6 @@ public class TodoVerticle extends AbstractVerticle {
                 });
             }
         });
-        /*if(!maybeTodo.isPresent())
-            sendError(404, context.response());
-        else if(newTodo == null)
-            sendError(400, context.response());
-
-        todos.remove(todoID);
-        Todo mergeTodo = maybeTodo.get().merge(newTodo);
-        todos.put(Integer.parseInt(todoID), mergeTodo);
-        context.response()
-                .putHeader("content-type", "application/json; charset=utf-8")
-                .end(Json.encodePrettily(mergeTodo));*/
-        //Optional<Todo> maybeTodo = getTodoById(todoID);
     }
 
     private void handleDeleteOne(RoutingContext context) {
@@ -181,12 +157,6 @@ public class TodoVerticle extends AbstractVerticle {
             else
                 sendError(404, context.response());
         });
-        /*Optional<Todo> maybeTodo = getTodoById(todoID);
-        if(!maybeTodo.isPresent())
-            sendError(404, context.response());
-        else
-            todos.remove(todoID);
-        context.response().setStatusCode(204).end();*/
     }
 
     private void handleDeleteAll(RoutingContext context) {
@@ -202,10 +172,4 @@ public class TodoVerticle extends AbstractVerticle {
         response.setStatusCode(statusCode).end();
     }
 
-    /*private Optional<Todo> getTodoById(String id) {
-        redis.hget(REDIS_TODO_KEY, id, x -> {
-
-        });
-        return Optional.ofNullable(???);
-    }*/
 }
