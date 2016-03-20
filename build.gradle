@@ -2,14 +2,14 @@ apply plugin: 'java'
 apply plugin: 'idea'
 
 jar {
-    baseName = 'todo-backend'
-    version = '0.1.1'
+    baseName = 'vert-todo-backend'
+    //version = '0.1.1'
+    manifest {
+        attributes 'Main-Class': 'com.sczyh30.todolist.Application'
+    }
 }
 
 sourceCompatibility = 1.8
-
-
-//mainClassName = "com.sczyh30.todolist.Application"
 
 repositories {
     mavenCentral()
