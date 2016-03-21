@@ -32,7 +32,7 @@ public class TodoVerticle extends AbstractVerticle {
         redis = RedisClient.create(vertx, config);
 
         redis.hset(REDIS_TODO_KEY, "1", Json.encode(
-                new Todo(1, "Something to do...", false, 1, "todo/1")), res -> {
+                new Todo(98, "Something to do...", false, 1, "todo/1")), res -> {
             if (res.failed()) {
                 System.out.println("[Error]Redis service is not running!");
                 //res.cause().printStackTrace();
@@ -67,6 +67,7 @@ public class TodoVerticle extends AbstractVerticle {
         allowMethods.add(HttpMethod.DELETE);
         allowMethods.add(HttpMethod.PATCH);
 
+        router.route().handler(BodyHandler.create());
         router.route().handler(CorsHandler.create("*")
                 .allowedHeaders(allowHeaders)
                 .allowedMethods(allowMethods));
@@ -85,8 +86,8 @@ public class TodoVerticle extends AbstractVerticle {
     }
 
     private void handleCreateTodo(RoutingContext context) {
-        //System.out.println(context.getBodyAsString());
-        final Todo todo = getTodoFromJson(context.getBodyAsString());
+        final Todo todo = wrapObject(getTodoFromJson
+                (context.getBodyAsString()), context);
         final String encoded = Json.encode(todo);
         redis.hset(REDIS_TODO_KEY, String.valueOf(todo.getId()),
                 encoded, res -> {
@@ -184,8 +185,11 @@ public class TodoVerticle extends AbstractVerticle {
         response.setStatusCode(statusCode).end();
     }
 
-    private JsonObject addURL(JsonObject obj, String url) {
-        return obj.put("url", url);
+    private Todo wrapObject(Todo todo, RoutingContext context) {
+        if(todo.getId() == 0)
+            todo.setId(new Random().nextInt());
+        todo.setUrl(context.request().absoluteURI() +  "/" + todo.getId());
+        return todo;
     }
 
 }
