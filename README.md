@@ -1,9 +1,18 @@
 # todo-backend-vert.x
 [![Travis Build Status](https://travis-ci.org/sczyh30/todo-backend-vert.x.svg?branch=master)](https://travis-ci.org/sczyh30/todo-backend-vert.x)
 
-A simple Todo-Backend implementation using Vert.x, with redis backend (Vert.x-Redis support).
+A simple Todo-Backend implementation using Vert.x, with Redis backend (Vert.x-Redis support).
 
 ## RESTful API Route
+
+The Todo-Backend API:
+
+- Add a todo entity: `POST /todos`
+- Get a certain todo entity: `GET /todos/:todoId`
+- Get all todo entities: `GET /todos`
+- Update a todo entity: `PATCH /todos/:todoId`
+- Delete a certain todo entity: `DELETE /todos/:todoId`
+- Delete all todo entities: `DELETE /todos`
 
 ## Build with Docker
 

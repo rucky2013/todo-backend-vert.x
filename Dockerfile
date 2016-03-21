@@ -5,10 +5,10 @@ RUN wget http://download.redis.io/releases/redis-3.0.7.tar.gz \
         && tar xzf redis-3.0.7.tar.gz \
         && rm redis-3.0.7.tar.gz \
         && cd redis-3.0.7 \
-        && apt-get update \
-        && apt-get install make gcc \
+        && apt-get update -y \
+        && apt-get install make gcc -y \
         && make \
-        && sudo make install
+        && make install
 
 ENV VERTICLE_NAME com.sczyh30.todolist.TodoVerticle
 ENV VERTICLE_FILE build/libs/vert-todo-backend.jar

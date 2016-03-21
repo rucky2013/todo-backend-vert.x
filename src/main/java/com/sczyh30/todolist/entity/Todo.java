@@ -94,6 +94,17 @@ public class Todo {
         return true;
     }
 
+    @Override
+    public String toString() {
+        return "Todo -> {" +
+                "id=" + id +
+                ", title='" + title + '\'' +
+                ", completed=" + completed +
+                ", order=" + order +
+                ", url='" + url + '\'' +
+                '}';
+    }
+
     private <T> T getOrElse(T value, T defaultValue) {
         return value == null ? defaultValue : value;
     }

@@ -26,12 +26,15 @@ public class TodoVerticle extends AbstractVerticle {
 
     RedisClient redis;
 
+    /**
+     * Init the redis client and save sample data
+     */
     private void initData() {
         final RedisOptions config = new RedisOptions()
                 .setHost("127.0.0.1");
         redis = RedisClient.create(vertx, config);
 
-        redis.hset(REDIS_TODO_KEY, "1", Json.encode(
+        redis.hset(REDIS_TODO_KEY, "98", Json.encode(
                 new Todo(98, "Something to do...", false, 1, "todo/1")), res -> {
             if (res.failed()) {
                 System.out.println("[Error]Redis service is not running!");
@@ -43,10 +46,6 @@ public class TodoVerticle extends AbstractVerticle {
                 new Todo(2, "Another thing to do...", false, 2, "todo/2")), res -> {
         });
 
-    }
-
-    private Todo getTodoFromJson(String jsonStr) {
-        return Json.decodeValue(jsonStr, Todo.class);
     }
 
     @Override
@@ -185,9 +184,24 @@ public class TodoVerticle extends AbstractVerticle {
         response.setStatusCode(statusCode).end();
     }
 
+    /**
+     * Decode Todo entity from JSON str
+     * @param jsonStr JSON str
+     * @return Todo entity
+     */
+    private Todo getTodoFromJson(String jsonStr) {
+        return Json.decodeValue(jsonStr, Todo.class);
+    }
+
+    /**
+     * Wrap the Todo entity with appropriate id and url
+     * @param todo a todo entity
+     * @param context RoutingContext
+     * @return the wrapped todo entity
+     */
     private Todo wrapObject(Todo todo, RoutingContext context) {
         if(todo.getId() == 0)
-            todo.setId(new Random().nextInt());
+            todo.setId(Math.abs(new Random().nextInt()));
         todo.setUrl(context.request().absoluteURI() +  "/" + todo.getId());
         return todo;
     }
