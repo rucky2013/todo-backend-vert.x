@@ -8,8 +8,11 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.CorsHandler;
 import io.vertx.redis.RedisClient;
 import io.vertx.redis.RedisOptions;
@@ -28,16 +31,16 @@ public class TodoVerticle extends AbstractVerticle {
                 .setHost("127.0.0.1");
         redis = RedisClient.create(vertx, config);
 
-        redis.hset(REDIS_TODO_KEY, "1", Json.encodePrettily(
-                new Todo(1, "Something to do...", false, 1)), res -> {
+        redis.hset(REDIS_TODO_KEY, "1", Json.encode(
+                new Todo(1, "Something to do...", false, 1, "todo/1")), res -> {
             if (res.failed()) {
                 System.out.println("[Error]Redis service is not running!");
                 //res.cause().printStackTrace();
             }
         });
 
-        redis.hset(REDIS_TODO_KEY, "2", Json.encodePrettily(
-                new Todo(2, "Another thing to do...", false, 2)), res -> {
+        redis.hset(REDIS_TODO_KEY, "2", Json.encode(
+                new Todo(2, "Another thing to do...", false, 2, "todo/2")), res -> {
         });
 
     }
@@ -54,8 +57,9 @@ public class TodoVerticle extends AbstractVerticle {
         // CORS support
         Set<String> allowHeaders = new HashSet<>();
         allowHeaders.add("x-requested-with");
+        allowHeaders.add("Access-Control-Allow-Origin");
         allowHeaders.add("origin");
-        allowHeaders.add("content-type");
+        allowHeaders.add("Content-Type");
         allowHeaders.add("accept");
         Set<HttpMethod> allowMethods = new HashSet<>();
         allowMethods.add(HttpMethod.GET);
@@ -63,8 +67,9 @@ public class TodoVerticle extends AbstractVerticle {
         allowMethods.add(HttpMethod.DELETE);
         allowMethods.add(HttpMethod.PATCH);
 
-        router.route().handler(CorsHandler.create("*").allowedHeaders(allowHeaders)
-            .allowedMethods(allowMethods));
+        router.route().handler(CorsHandler.create("*")
+                .allowedHeaders(allowHeaders)
+                .allowedMethods(allowMethods));
 
         // routes
         router.get(API_GET).handler(this::handleGetTodo);
@@ -80,14 +85,16 @@ public class TodoVerticle extends AbstractVerticle {
     }
 
     private void handleCreateTodo(RoutingContext context) {
+        //System.out.println(context.getBodyAsString());
         final Todo todo = getTodoFromJson(context.getBodyAsString());
+        final String encoded = Json.encode(todo);
         redis.hset(REDIS_TODO_KEY, String.valueOf(todo.getId()),
-                Json.encodePrettily(todo), res -> {
+                encoded, res -> {
                     if (res.succeeded())
                         context.response()
                                 .setStatusCode(201)
                                 .putHeader("content-type", "application/json; charset=utf-8")
-                                .end(Json.encodePrettily(todo));
+                                .end(encoded);
                     else
                         sendError(503, context.response());
                 });
@@ -113,10 +120,15 @@ public class TodoVerticle extends AbstractVerticle {
 
     private void handleGetAll(RoutingContext context) {
         redis.hgetall(REDIS_TODO_KEY, res -> {
-            if (res.succeeded())
+            List<Object> list = new ArrayList<>();
+            if (res.succeeded()) {
+                res.result().forEach(x ->
+                        list.add(getTodoFromJson((String)x.getValue())));
+                String encoded = new JsonArray(list).encode();
                 context.response()
-                    .putHeader("content-type", "application/json; charset=utf-8")
-                    .end(res.result().encodePrettily());
+                        .putHeader("content-type", "application/json; charset=utf-8")
+                        .end(encoded);
+            }
             else
                 sendError(404, context.response());
         });
@@ -137,12 +149,12 @@ public class TodoVerticle extends AbstractVerticle {
                 sendError(404, context.response());
             else {
                 Todo oldTodo = getTodoFromJson(result);
-                String response = Json.encodePrettily(oldTodo.merge(newTodo));
+                String response = Json.encode(oldTodo.merge(newTodo));
                 redis.hset(REDIS_TODO_KEY, todoID, response, res -> {
                     if (res.succeeded()) {
                         context.response()
                                 .putHeader("content-type", "application/json; charset=utf-8")
-                                .end(Json.encodePrettily(response));
+                                .end(response);
                     }
                 });
             }
@@ -164,12 +176,16 @@ public class TodoVerticle extends AbstractVerticle {
             if (res.succeeded())
                 context.response().setStatusCode(204).end();
             else
-                sendError(404, context.response());
+                sendError(400, context.response());
         });
     }
 
     private void sendError(int statusCode, HttpServerResponse response) {
         response.setStatusCode(statusCode).end();
+    }
+
+    private JsonObject addURL(JsonObject obj, String url) {
+        return obj.put("url", url);
     }
 
 }

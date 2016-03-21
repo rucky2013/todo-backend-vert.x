@@ -9,12 +9,31 @@ public class Todo {
     private String title;
     private Boolean completed;
     private Integer order;
+    private String url;
 
-    public Todo(int id, String title, Boolean completed, Integer order) {
+    public Todo() {}
+
+    public Todo(String title) {
+        this.title = title;
+    }
+
+    public Todo(String title, Integer order) {
+        this.title = title;
+        this.order = order;
+    }
+
+    public Todo(String title, Boolean completed, Integer order) {
+        this.title = title;
+        this.completed = completed;
+        this.order = order;
+    }
+
+    public Todo(int id, String title, Boolean completed, Integer order, String url) {
         this.id = id;
         this.title = title;
         this.completed = completed;
         this.order = order;
+        this.url = url;
     }
 
     public int getId() {
@@ -33,7 +52,7 @@ public class Todo {
         this.title = title;
     }
 
-    public Boolean getCompleted() {
+    public Boolean isCompleted() {
         return getOrElse(completed, false);
     }
 
@@ -47,6 +66,14 @@ public class Todo {
 
     public void setOrder(Integer order) {
         this.order = order;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
     }
 
     // use id as the primary key
@@ -75,7 +102,8 @@ public class Todo {
         return new Todo(id,
                 getOrElse(todo.title, title),
                 getOrElse(todo.completed, completed),
-                getOrElse(todo.order, order));
+                getOrElse(todo.order, order),
+                url);
     }
 
 
