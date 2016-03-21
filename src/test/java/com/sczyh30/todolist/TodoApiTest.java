@@ -1,9 +1,10 @@
 package com.sczyh30.todolist;
 
 import com.sczyh30.todolist.entity.Todo;
+
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.Json;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -27,29 +28,33 @@ public class TodoApiTest {
 
     Vertx vertx;
 
+    Todo todoEx = new Todo(164, "Test case...", false, 22, "http://127.0.0.1:8082/todos/164");
+    Todo todoUp = new Todo(164, "Test case...Update!", false, 26, "http://127.0.0.1:8082/todos/164");
+
     @Before
     public void before(TestContext context) {
         vertx = Vertx.vertx();
         vertx.deployVerticle(TodoVerticle.class.getName(), context.asyncAssertSuccess());
     }
 
-    @After
-    public void after(TestContext context) {
-        vertx.close(context.asyncAssertSuccess());
-    }
-
     @Test
     public void testAdd(TestContext context) throws Exception {
+        Async async = context.async();
+        HttpClient client = vertx.createHttpClient();
+        Todo todo = new Todo(164, "Test case...", false, 22, "/164");
+        client.post(port, "localhost", "/todos", response -> {
+            context.assertEquals(201, response.statusCode());
+            client.close();
+            async.complete();
+        }).putHeader("content-type", "application/json").end(Json.encodePrettily(todo));
     }
 
     @Test
     public void testGet(TestContext context) throws Exception {
         Async async = context.async();
         HttpClient client = vertx.createHttpClient();
-        client.getNow(port, "localhost", "/todos/98", response -> response.bodyHandler(body -> {
-            Todo todo = getTodoFromJson(body.toString());
-            context.assertEquals(todo, new Todo(
-                    98, "Something to do...", false, 1, "todo/1"));
+        client.getNow(port, "localhost", "/todos/164", response -> response.bodyHandler(body -> {
+            context.assertEquals(getTodoFromJson(body.toString()), todoEx);
             client.close();
             async.complete();
         }));
@@ -57,14 +62,21 @@ public class TodoApiTest {
 
     @Test
     public void testUpdate(TestContext context) throws Exception {
-
+        Async async = context.async();
+        HttpClient client = vertx.createHttpClient();
+        Todo todo = new Todo(164, "Test case...Update!", false, 26, "/164h");
+        client.request(HttpMethod.PATCH, port, "localhost", "/todos/164", response -> response.bodyHandler(body -> {
+            context.assertEquals(getTodoFromJson(body.toString()), todoUp);
+            client.close();
+            async.complete();
+        })).putHeader("content-type", "application/json").end(Json.encodePrettily(todo));
     }
 
     @Test
     public void testDelete(TestContext context) throws Exception {
         /*Async async = context.async();
         HttpClient client = vertx.createHttpClient();
-        client.delete(port, "localhost", "/todos/98", response -> {
+        client.delete(port, "localhost", "/todos/164", response -> {
             context.assertEquals(204, response.statusCode());
             client.close();
             async.complete();
@@ -73,5 +85,10 @@ public class TodoApiTest {
 
     private Todo getTodoFromJson(String jsonStr) {
         return Json.decodeValue(jsonStr, Todo.class);
+    }
+
+    @After
+    public void after(TestContext context) {
+        vertx.close(context.asyncAssertSuccess());
     }
 }

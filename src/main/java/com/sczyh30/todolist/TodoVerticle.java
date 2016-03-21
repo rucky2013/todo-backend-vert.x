@@ -38,7 +38,7 @@ public class TodoVerticle extends AbstractVerticle {
                 new Todo(98, "Something to do...", false, 1, "todo/1")), res -> {
             if (res.failed()) {
                 System.out.println("[Error]Redis service is not running!");
-                //res.cause().printStackTrace();
+                res.cause().printStackTrace();
             }
         });
 
