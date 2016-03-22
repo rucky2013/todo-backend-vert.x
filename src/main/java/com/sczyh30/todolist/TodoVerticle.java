@@ -119,14 +119,17 @@ public class TodoVerticle extends AbstractVerticle {
             sendError(400, context.response());
         else {
             redis.hget(REDIS_TODO_KEY, todoID, x -> {
-                String result = x.result();
-                if (result == null)
-                    sendError(404, context.response());
-                else {
-                    context.response()
-                            .putHeader("content-type", "application/json; charset=utf-8")
-                            .end(result);
-                }
+                if (x.succeeded()) {
+                    String result = x.result();
+                    if (result == null)
+                        sendError(404, context.response());
+                    else {
+                        context.response()
+                                .putHeader("content-type", "application/json; charset=utf-8")
+                                .end(result);
+                    }
+                } else
+                    sendError(503, context.response());
             });
         }
     }
@@ -142,7 +145,7 @@ public class TodoVerticle extends AbstractVerticle {
                         .end(encoded);
             }
             else
-                sendError(500, context.response());
+                sendError(503, context.response());
         });
     }
 
@@ -156,20 +159,23 @@ public class TodoVerticle extends AbstractVerticle {
         }
 
         redis.hget(REDIS_TODO_KEY, todoID, x -> {
-            String result = x.result();
-            if (result == null)
-                sendError(404, context.response());
-            else {
-                Todo oldTodo = getTodoFromJson(result);
-                String response = Json.encodePrettily(oldTodo.merge(newTodo));
-                redis.hset(REDIS_TODO_KEY, todoID, response, res -> {
-                    if (res.succeeded()) {
-                        context.response()
-                                .putHeader("content-type", "application/json; charset=utf-8")
-                                .end(response);
-                    }
-                });
-            }
+            if (x.succeeded()) {
+                String result = x.result();
+                if (result == null)
+                    sendError(404, context.response());
+                else {
+                    Todo oldTodo = getTodoFromJson(result);
+                    String response = Json.encodePrettily(oldTodo.merge(newTodo));
+                    redis.hset(REDIS_TODO_KEY, todoID, response, res -> {
+                        if (res.succeeded()) {
+                            context.response()
+                                    .putHeader("content-type", "application/json; charset=utf-8")
+                                    .end(response);
+                        }
+                    });
+                }
+            } else
+                sendError(503, context.response());
         });
     }
 
@@ -179,7 +185,7 @@ public class TodoVerticle extends AbstractVerticle {
             if (res.succeeded())
                 context.response().setStatusCode(204).end();
             else
-                sendError(500, context.response());
+                sendError(503, context.response());
         });
     }
 
@@ -188,7 +194,7 @@ public class TodoVerticle extends AbstractVerticle {
             if (res.succeeded())
                 context.response().setStatusCode(204).end();
             else
-                sendError(500, context.response());
+                sendError(503, context.response());
         });
     }
 
