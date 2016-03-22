@@ -1,7 +1,7 @@
-# todo-backend-vert.x
+# Todo-Backend-Vert.x
 [![Travis Build Status](https://travis-ci.org/sczyh30/todo-backend-vert.x.svg?branch=master)](https://travis-ci.org/sczyh30/todo-backend-vert.x)
 
-A simple Todo-Backend implementation using Vert.x, with Redis backend (Vert.x-Redis support).
+A Todo-Backend implementation using Vert.x, with Redis backend (Vert.x-Redis support).
 
 ## RESTful API Route
 
@@ -13,6 +13,12 @@ The Todo-Backend API:
 - Update a todo entity: `PATCH /todos/:todoId`
 - Delete a certain todo entity: `DELETE /todos/:todoId`
 - Delete all todo entities: `DELETE /todos`
+
+## OpenShift
+
+- [OpenShift Live Demo URL](http://verttodo-sczyh30.rhcloud.com/todos)
+- [API Test](http://www.todobackend.com/specs/index.html?http://verttodo-sczyh30.rhcloud.com/todos)
+- [Client Test](http://www.todobackend.com/client/index.html?http://verttodo-sczyh30.rhcloud.com/todos)
 
 ## Build with Docker
 
