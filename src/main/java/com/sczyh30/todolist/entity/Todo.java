@@ -76,12 +76,6 @@ public class Todo {
         this.url = url;
     }
 
-    // use id as the primary key
-    @Override
-    public int hashCode() {
-        return id;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -90,8 +84,19 @@ public class Todo {
         Todo todo = (Todo) o;
 
         if (id != todo.id) return false;
+        if (!title.equals(todo.title)) return false;
+        if (completed != null ? !completed.equals(todo.completed) : todo.completed != null) return false;
+        return order != null ? order.equals(todo.order) : todo.order == null;
 
-        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = id;
+        result = 31 * result + title.hashCode();
+        result = 31 * result + (completed != null ? completed.hashCode() : 0);
+        result = 31 * result + (order != null ? order.hashCode() : 0);
+        return result;
     }
 
     @Override
