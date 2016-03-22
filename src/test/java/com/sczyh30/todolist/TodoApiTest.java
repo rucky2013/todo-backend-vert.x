@@ -37,7 +37,7 @@ public class TodoApiTest {
         vertx.deployVerticle(TodoVerticle.class.getName(), context.asyncAssertSuccess());
     }
 
-    @Test
+    @Test(timeout = 3000L)
     public void testAdd(TestContext context) throws Exception {
         Async async = context.async();
         HttpClient client = vertx.createHttpClient();
@@ -49,7 +49,7 @@ public class TodoApiTest {
         }).putHeader("content-type", "application/json").end(Json.encodePrettily(todo));
     }
 
-    @Test
+    @Test(timeout = 3000L)
     public void testGet(TestContext context) throws Exception {
         Async async = context.async();
         HttpClient client = vertx.createHttpClient();
@@ -60,7 +60,7 @@ public class TodoApiTest {
         }));
     }
 
-    @Test
+    @Test(timeout = 3000L)
     public void testUpdate(TestContext context) throws Exception {
         Async async = context.async();
         HttpClient client = vertx.createHttpClient();
@@ -72,7 +72,7 @@ public class TodoApiTest {
         })).putHeader("content-type", "application/json").end(Json.encodePrettily(todo));
     }
 
-    @Test
+    @Test(timeout = 3000L)
     public void testDelete(TestContext context) throws Exception {
         /*Async async = context.async();
         HttpClient client = vertx.createHttpClient();

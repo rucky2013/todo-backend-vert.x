@@ -3,6 +3,7 @@ apply plugin: 'idea'
 
 jar {
     baseName = 'vert-todo-backend'
+    //from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
     //version = '0.1.1'
     manifest {
         attributes 'Main-Class': 'com.sczyh30.todolist.Application'
@@ -31,4 +32,13 @@ dependencies {
 
 task wrapper(type: Wrapper) {
     gradleVersion = '2.9'
+}
+
+// Heroku need this task
+task stage {
+    dependsOn build
+}
+
+task fatJar(type: Jar) {
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
 }

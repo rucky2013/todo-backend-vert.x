@@ -5,6 +5,7 @@ import com.sczyh30.todolist.entity.Todo;
 import static com.sczyh30.todolist.Constants.*;
 
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
@@ -24,20 +25,29 @@ import java.util.*;
  */
 public class TodoVerticle extends AbstractVerticle {
 
+    static String HOST = "127.0.0.1";
+    static int PORT = 8082;
+
     RedisClient redis;
 
     /**
      * Init the redis client and save sample data
      */
     private void initData() {
-        final RedisOptions config = new RedisOptions()
-                .setHost("127.0.0.1");
+        RedisOptions config;
+        if (System.getenv("OPENSHIFT_VERTX_IP") != null)
+            config = new RedisOptions()
+                .setHost("127.1.250.130").setPort(16379);
+        else
+            config = new RedisOptions()
+                    .setHost(HOST);
+
         redis = RedisClient.create(vertx, config);
 
         redis.hset(REDIS_TODO_KEY, "98", Json.encode(
                 new Todo(98, "Something to do...", false, 1, "todo/1")), res -> {
             if (res.failed()) {
-                System.out.println("[Error]Redis service is not running!");
+                System.err.println("[Error]Redis service is not running!");
                 res.cause().printStackTrace();
             }
         });
@@ -49,7 +59,7 @@ public class TodoVerticle extends AbstractVerticle {
     }
 
     @Override
-    public void start() throws Exception {
+    public void start(Future<Void> future) throws Exception {
         initData();
 
         Router router = Router.router(vertx);
@@ -81,7 +91,13 @@ public class TodoVerticle extends AbstractVerticle {
 
         vertx.createHttpServer()
                 .requestHandler(router::accept)
-                .listen(8082);
+                .listen(config().getInteger("http.port", PORT),
+                        System.getProperty("http.address", HOST), result -> {
+                    if (result.succeeded())
+                        future.complete();
+                    else
+                        future.fail(result.cause());
+                });
     }
 
     private void handleCreateTodo(RoutingContext context) {
